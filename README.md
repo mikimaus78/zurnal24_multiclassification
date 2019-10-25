@@ -4,14 +4,13 @@ Sample Usage:
 ```
 $ python standalone_FINAL.py
 ```
-This command will perform whole experiment:
+This command will perform whole experiment (time consuming!!!):
  - download data and create dataset
  - preprocess data
  - perform learning on Logistic Regression and SGD
  - perform deep learning
  - create visualization
  - saves best model for prediction
- (time consuming!!!)
 
 ```
 $ python standalone_FINAL.py [file]

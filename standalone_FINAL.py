@@ -1,9 +1,10 @@
 import os
+import urllib
 import warnings
+from os.path import join, isfile
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=DeprecationWarning)
-from data import Data
 import pickle
 import sys
 
@@ -406,6 +407,98 @@ SLOVENE_STOP_WORDS = frozenset(
      "dovolil", "hotel", "maral", "mogel", "moral", "smel", "zmogel", "želelo", "dovolilo", "hotelo", "maralo",
      "moglo",
      "moralo", "smelo", "zmogl"])
+
+class Data(object):
+    def __init__(self):
+        pass
+
+    def ensure_dir(self, file_path):
+        directory = os.path.dirname(file_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    def save_content(self, content_id, content, label):
+        folder_path = dataset_path + "/" + label + "/"
+        file_path = dataset_path + "/" + label + "/" + content_id + ".txt"
+        self.ensure_dir(folder_path)  # check if folder exists, if not create it
+        file1 = open(file_path, "w", encoding="utf-8")
+        file1.write(content)
+        file1.close()
+
+    def generate_dataset_from_file(self, filepath):
+        print("Start generating dataset...")
+        counter = 0
+        with open(filepath) as input_file:
+            for line in input_file:
+                if len(line) > 0:
+                    line = line.split('\t')
+                    try:
+                        content_id = line[0].split('-')[-1]  # get unique id from url
+                        content = re.sub('\s+', ' ', self.get_content(line[0]))  # remove \t and \n from content
+                        label = re.sub('\s+', '', line[1])
+                    except Exception as e:
+                        print("Exception:", str(e))
+
+                    print("i:", counter, " label:", label, " content:", content)
+                    self.save_content(content_id, content, label)
+                    counter += 1
+
+        print("Dataset created...")
+
+    def get_content(self, url):
+        source = urllib.request.urlopen(url).read()
+        soup = BeautifulSoup(source, 'lxml')
+
+        # kill all script and style elements
+        for script in soup(["script", "style"]):
+            script.decompose()  # rip it out
+
+        content = soup.find_all('div', class_='article__body')
+
+        if len(content) > 0:
+            return content[0].get_text(" ", strip=True)  # 0 -> article content, 1 -> article comments
+        else:
+            print("missing content id:", url)
+            return ""
+
+    def load_dataset(self, mypath):
+        content, label = [], []
+
+        labels = os.listdir(mypath)
+        for txt_label in labels:
+            num_label = list(classnames_dict.keys())[list(classnames_dict.values()).index(txt_label)]
+            dir_path = mypath + "/" + txt_label
+            onlyfiles = [f for f in os.listdir(dir_path) if isfile(join(dir_path, f))]
+            for dat_file in onlyfiles:
+                path = dir_path + "/" + dat_file
+                for line in open(path, 'r', encoding="utf-8"):
+                    # data.append(json.loads(line))
+                    content.append(line)
+                    label.append(num_label)
+        df = pd.DataFrame([content, label]).T
+        df.columns = ['content', 'label']
+        df.to_csv(model_path + "dataset.csv")
+        # return df
+
+        # print("df shape:", df.shape)
+        # df_sample = df.sample(n=500, random_state=1)
+        # distribution = df_sample['label'].value_counts()
+        # print("df shape:", df_sample.shape)
+        # print("distribution:", distribution)
+        return df
+
+
+    def save_model(self, path, filename, model):
+        # save the model to disk
+        filename = path + filename
+        self.ensure_dir(path)
+        pickle.dump(model, open(filename, 'wb'))
+
+    def load_model(self, path, filename):
+        # load the model from the disk
+        filename = path + filename
+        model = pickle.load(open(filename, 'rb'))
+        return model
 
 
 class TextUtils(object):
@@ -819,7 +912,6 @@ class SciKitModels(object):
         feature_create, feature_name = feature_type['feature'], feature_type['name']
         if feature_name == 'TfidfVectorizer':  # n-gram level features
             if feature_type['level'] == 'n-gram':
-                print("tdif n-gram")
                 vectorizer = TfidfVectorizer()
                 parameters = {'feature__max_df': [0.25, 0.5, 0.75, 1.0],
                               'feature__min_df':[2,3],
@@ -831,7 +923,6 @@ class SciKitModels(object):
 
                 # self.save_model(model_path, 'n-gram.vec', vectorizer)
             elif feature_type['level'] == 'word_char':  # word level td-idf
-                print("tdif word")
                 vectorizer = TfidfVectorizer(token_pattern=r'\w{1,}')
                 parameters = {'feature__analyzer': ['word', 'char'],
                               'feature__max_df': [0.25, 0.5, 0.75, 1.0],
@@ -843,7 +934,6 @@ class SciKitModels(object):
                              }
 
         elif feature_name == 'CountVectorizer':
-            print("count word")
             vectorizer = CountVectorizer(token_pattern=r'\w{1,}')
             parameters = {'feature__analyzer': ['char', 'word'],
                           'feature__max_df': [0.25, 0.5, 0.75, 1.0],
@@ -929,13 +1019,12 @@ class SciKitModels(object):
         data = Data()
         print("==== Step 1: Generating dataset...")
         logging.info("start")
-        data.generate_dataset_from_file(global_filename)
+        # data.generate_dataset_from_file(global_filename)
         print("==== Step 2: Loading dataset...")
         df = data.load_dataset(dataset_path)
         class_names = df['label'].unique()
         init_csv = model_path + 'init.csv'
         df.to_csv(init_csv)
-        print("class names:", class_names)
         # print ("df head:", df.head(5))
         print("==== Step 3: Preporcesing texts...")
         # Apply the function to preprocess the text. Tokenize, lower, expand contactions, lemmatize, remove punctuation, numbers and stop words
@@ -1016,11 +1105,9 @@ class SciKitModels(object):
 
 
 if __name__ == '__main__':
-
-    print(len(sys.argv))
     if len(sys.argv) == 1:
         data = Data()
-        data.generate_dataset_from_file(global_filename)
+        # data.generate_dataset_from_file(global_filename)
         tu = TextUtils(SLOVENE_STOP_WORDS)
         # sci-kit models
         sci_kit = SciKitModels(data)
@@ -1030,12 +1117,12 @@ if __name__ == '__main__':
         dnn = DeepModels(data)
         dnn.create_experiment()
     elif len(sys.argv) == 2:
-        url = str(sys.argv[1])
-        if 'http' in url:
-            data = Data()
-            sci_kit = SciKitModels(data)
-            sci_kit.predict_url(url)
-            # dnn = DeepModels(data)
-            # dnn.predict_url(url)
-        else:
-            raise Exception("url {} is not in http format".format(url))
+        links_file = str(sys.argv[1])
+        data = Data()
+        sci_kit = SciKitModels(data)
+        # dnn = DeepModels(data)
+        with open(links_file) as input_file:
+            for url in input_file:
+                sci_kit.predict_url(url)
+                # dnn.predict_url(url)
+

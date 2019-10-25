@@ -14,7 +14,7 @@ This command will perform whole experiment:
  (time consuming!!!)
 
 ```
-$ python standalone_FINAL.py [url]
+$ python standalone_FINAL.py [file]
 ```
-This command will predict class based on url
+This command will predict class based on urls in provided file
 

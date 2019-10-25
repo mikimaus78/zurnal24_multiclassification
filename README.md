@@ -3,7 +3,7 @@
 Sample Usage:
 ```
 $ python standalone_FINAL.py
-
+```
 This command will perform whole experiment:
  - download data and create dataset
  - preprocess data
@@ -15,6 +15,6 @@ This command will perform whole experiment:
 
 ```
 $ python standalone_FINAL.py [url]
-
-This command will predict class based on url
 ```
+This command will predict class based on url
+

@@ -771,11 +771,11 @@ class DeepModels(object):
             .format(embedding_dim, MAX_LENGTH, vocab_size, lstm_layer, hidden_layer)
         return model, model_params
 
-    def create_experiment(self):
+    def create_experiment(self, text_utils):
         data = self.data
         print("==== Step 1: Generating dataset...")
         logging.info("start")
-        data.generate_dataset_from_file(global_filename)
+        # data.generate_dataset_from_file(global_filename)
         print("==== Step 2: Loading dataset...")
         df = data.load_dataset(dataset_path)
         class_names = df['label'].unique()
@@ -786,7 +786,7 @@ class DeepModels(object):
 
         print("==== Step 3: Preporcesing texts...")
         # Apply the function to preprocess the text. Tokenize, lower, expand contactions, lemmatize, remove punctuation, numbers and stop words
-        df['clean_text'] = df['content'].apply(utils.process_text)
+        df['clean_text'] = df['content'].apply(text_utils.process_text)
         # pipes_settings = get_all(data, df)
         print("==== Step 5: Splitting data...")
         LE = LabelEncoder()
@@ -1107,7 +1107,7 @@ class SciKitModels(object):
 if __name__ == '__main__':
     if len(sys.argv) == 1:
         data = Data()
-        # data.generate_dataset_from_file(global_filename)
+        data.generate_dataset_from_file(global_filename)
         tu = TextUtils(SLOVENE_STOP_WORDS)
         # sci-kit models
         sci_kit = SciKitModels(data)
@@ -1115,7 +1115,7 @@ if __name__ == '__main__':
 
         # tensor flow models
         dnn = DeepModels(data)
-        dnn.create_experiment()
+        dnn.create_experiment(tu)
     elif len(sys.argv) == 2:
         links_file = str(sys.argv[1])
         data = Data()

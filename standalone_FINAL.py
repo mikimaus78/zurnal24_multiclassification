@@ -72,34 +72,27 @@ model_path = './models/'
 classnames_dict = {0: 'avto', 1: 'sport', 2: 'svet', 3: 'slovenija', 4: 'magazin'}
 
 fetures_dict = [{'feature': CountVectorizer(), 'name': 'CountVectorizer'},
+                {'feature': TfidfVectorizer(), 'name': 'TfidfVectorizer', 'level': 'word_char'},
+                {'feature': TfidfVectorizer(), 'name': 'TfidfVectorizer', 'level': 'n-gram'}
                 ]
 
-"""
-{'feature': TfidfVectorizer(), 'name': 'TfidfVectorizer', 'level': 'word_char'},
-                {'feature': TfidfVectorizer(), 'name': 'TfidfVectorizer', 'level': 'n-gram'}
-"""
-
 sampling_dict = [{'method': SMOTE(), 'name': 'SMOTE', 'params': {'k_neighbors': [1, 5, 10]}},
+                 {'method': RandomOverSampler(), 'name': 'RandomOverSampler'},
+                 {'method': RandomUnderSampler(), 'name': 'RandomUnderSampler'}
                  ]
 
-"""
-{'method': RandomOverSampler(), 'name': 'RandomOverSampler'},
-                 {'method': RandomUnderSampler(), 'name': 'RandomUnderSampler'}
-"""
-
 reduction_dict = [
-    {'method': TruncatedSVD(n_components=10, n_iter=10), 'name': 'TruncatedSVD',
+    {'method': TruncatedSVD(n_components=10), 'name': 'TruncatedSVD',
      'params': {'n_iter': 20, 'random_state': 3}},
-]
-# {'method':NMF(), 'name': 'NMF', 'params': {'n_components':10, 'n_iter':10, 'init':'random', 'random_state':3}
-"""
-{'method': TruncatedSVD(n_components=50, n_iter=10), 'name': 'TruncatedSVD',
+    {'method': TruncatedSVD(n_components=50), 'name': 'TruncatedSVD',
      'params': {'n_iter': 20, 'random_state': 3}},
-    {'method': TruncatedSVD(n_components=100, n_iter=10), 'name': 'TruncatedSVD',
+    {'method': TruncatedSVD(n_components=100), 'name': 'TruncatedSVD',
      'params': {'n_iter': 20, 'random_state': 3}},
-    {'method': TruncatedSVD(n_components=500, n_iter=10), 'name': 'TruncatedSVD',
+    {'method': TruncatedSVD(n_components=500), 'name': 'TruncatedSVD',
      'params': {'n_iter': 20, 'random_state': 3}}
-"""
+
+]
+
 
 final_models = [
 
@@ -827,13 +820,7 @@ class SciKitModels(object):
         if feature_name == 'TfidfVectorizer':  # n-gram level features
             if feature_type['level'] == 'n-gram':
                 print("tdif n-gram")
-                # vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=2, max_df=.95, max_features=1000)
                 vectorizer = TfidfVectorizer()
-                parameters = {'feature__max_df': [1.0],
-                              'feature__min_df': [2, 3],
-                              'feature__ngram_range': [(1, 2)],
-                              }
-                """
                 parameters = {'feature__max_df': [0.25, 0.5, 0.75, 1.0],
                               'feature__min_df':[2,3],
                               'feature__ngram_range':[(1, 2), (2, 3)],
@@ -841,19 +828,11 @@ class SciKitModels(object):
                               'feature__norm': ['l1', 'l2', None],
                               'feature__max_features': [1000, 5000, 10000],
                               }
-                """
+
                 # self.save_model(model_path, 'n-gram.vec', vectorizer)
             elif feature_type['level'] == 'word_char':  # word level td-idf
                 print("tdif word")
                 vectorizer = TfidfVectorizer(token_pattern=r'\w{1,}')
-                parameters = {'feature__analyzer': ['word'],
-                              'feature__max_df': [1.0],
-                              'feature__min_df': [2],
-                              'feature__ngram_range': [(1, 2)],
-                              'feature__norm': ['l1'],
-                              'feature__max_features': [1000],
-                              }
-                """
                 parameters = {'feature__analyzer': ['word', 'char'],
                               'feature__max_df': [0.25, 0.5, 0.75, 1.0],
                              'feature__min_df': [2, 3],
@@ -862,25 +841,16 @@ class SciKitModels(object):
                              'feature__norm': ['l1', 'l2', None],
                              'feature__max_features': [1000, 5000, 10000],
                              }
-                """
+
         elif feature_name == 'CountVectorizer':
             print("count word")
             vectorizer = CountVectorizer(token_pattern=r'\w{1,}')
-            parameters = {'feature__analyzer': ['char'],
-                          'feature__max_df': [1.0],
-                          'feature__min_df': [2],
-                          'feature__ngram_range': [(1, 2)],
-                          'feature__max_features': [1000],
-                          }
-            """
             parameters = {'feature__analyzer': ['char', 'word'],
                           'feature__max_df': [0.25, 0.5, 0.75, 1.0],
                           'feature__min_df': [2, 3],
                           'feature__ngram_range': [(1, 2), (2, 3)],
                           'feature__max_features': [1000, 5000, 10000],
                           }
-            """
-
         return vectorizer, parameters
 
     def get_step1_models(self, data_object, df):
@@ -1050,14 +1020,15 @@ if __name__ == '__main__':
     print(len(sys.argv))
     if len(sys.argv) == 1:
         data = Data()
+        data.generate_dataset_from_file(global_filename)
         tu = TextUtils(SLOVENE_STOP_WORDS)
         # sci-kit models
         sci_kit = SciKitModels(data)
         sci_kit.create_experiment(tu)
 
         # tensor flow models
-        # dnn = DeepModels(data)
-        # dnn.create_experiment()
+        dnn = DeepModels(data)
+        dnn.create_experiment()
     elif len(sys.argv) == 2:
         url = str(sys.argv[1])
         if 'http' in url:
@@ -1068,10 +1039,3 @@ if __name__ == '__main__':
             # dnn.predict_url(url)
         else:
             raise Exception("url {} is not in http format".format(url))
-
-    """
-    if sys.argv[0]:
-        filepath = sys.argv[1]
-    else:
-        filepath = global_filename
-    """

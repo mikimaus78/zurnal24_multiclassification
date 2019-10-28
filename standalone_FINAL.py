@@ -29,7 +29,6 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.multiclass import OneVsRestClassifier
 from tensorflow import keras
-import utils as utils
 
 import logging
 
@@ -66,7 +65,7 @@ sns.set_style('darkgrid')
 
 logging.basicConfig(filename='zurnal-last.log', format='%(asctime)s - %(message)s', level=logging.DEBUG)
 
-global_filename = './app/labeled_urls.tsv'
+global_filename = './dataset/labeled_urls.tsv'
 dataset_path = './dataset'
 model_path = './models/'
 
